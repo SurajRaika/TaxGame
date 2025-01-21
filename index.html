@@ -1,0 +1,73 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta property="og:title" content="A simple snake game 🐍" />
+  <meta property="og:description" content="A pixel snake game supported on keyboard enabled devices." />
+  <meta property="og:image" content="https://snaketravel.netlify.app/preview.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="apple-touch-icon" href="favicon.png" />
+  <link rel="icon" href="favicon.png" />
+  <link rel="stylesheet" href="./style.css" />
+  <title>Snake Game</title>
+</head>
+
+<body>
+  <div class="snk-brd"></div>
+  <div class="game-state-container">
+    <p class="not-supported hide">May not be supported on your device 📱</p>
+    <button class="start-game"> Tax Game</button>
+    <button class="pause-game hide">Pause Game 🐍 <span>=</span></button>
+  </div>
+  <!--    <header class="header"></header>-->
+  <!--    <main class="main"></main>-->
+  <footer class="game-stats">
+
+    <div style=" display:  flex; flex-direction: column; ">
+
+    <div class="stats-container">
+      <div class="stat-item"></div>
+      <label>Score:</label>
+      <span class="pts-count">0</span>
+    </div>
+    <div class="stat-item">
+      <label>Lives Lost:</label>
+      <span class="dead-count">0</span>
+    </div>
+    <div  style="opacity: 0;" class="stat-item">
+      <label>Level:</label>
+      <span class="spd-count">1</span>
+    </div>
+  </div>
+
+    </div>
+    <div class="credits">
+      <a href="https://www.crio.dev/" class="credit-link" target="_blank">
+        <span class="bracket">&lt;</span>
+        Created by Suraj Raika
+        <span class="bracket">&gt;</span>
+      </a>
+      <a href="https://github.com/SurajRaika" class="credit-link" target="_blank">
+        <span class="bracket">&lt;</span>
+        View on GitHub
+        <span class="bracket">&gt;</span>
+      </a>
+    </div>
+  </footer>
+
+  <dialog open class="dialog hide">
+    <p class="keyboard-message">
+      Do you have physical keyboard attached to play? This game only supported
+      on keyboard enabled devices and UI layout is not optimized for mobile
+      devices.
+    </p>
+    <button class="keyboard-proceed">Proceed &rarr;</button>
+  </dialog>
+  <script src="./app.js"></script>
+</body>
+
+</html>

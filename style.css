@@ -1,0 +1,354 @@
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
+
+.bona-nova-sc-regular {
+  font-family: "Bona Nova SC", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.bona-nova-sc-bold {
+  font-family: "Bona Nova SC", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.bona-nova-sc-regular-italic {
+  font-family: "Bona Nova SC", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+
+
+:root {
+  --bck-black-alp: #ffffff33;
+  --clp-star: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+html {
+  font-size: 62.5%;
+  overflow: hidden;
+
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  position: relative;
+  background-color: white;
+  font-size: 1.2rem;
+  overflow: hidden;
+}
+
+p {
+  margin: 0;
+  padding: 0;
+  font-family: monospace;
+}
+
+a,
+a:hover,
+a:active,
+a:visited {
+  text-decoration: none;
+  color: inherit;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+a span {
+  translate: 0 -1px;
+}
+
+a p {
+  text-decoration: underline;
+}
+
+button {
+  padding: 0;
+  margin: 0;
+  display: inline-block;
+  border: none;
+  background-color: transparent;
+  font-family: "VT323", monospace;
+  color: black;
+  cursor: pointer;
+}
+
+.snk-brd {
+  position: absolute;
+  inset: 0;
+  background: white;
+  width: calc(100vw - 32px);
+  height: calc(100vh - 32px);
+  z-index: -1;
+  gap: 1px;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+
+  display: grid;
+  grid-template-columns: repeat(150, 1fr);
+  grid-template-rows: repeat(150, 1fr);
+}
+
+.header {
+  position: sticky;
+  inset: 0;
+  height: 70px;
+  border-bottom: 1px solid var(--bck-black-alp);
+}
+
+.main {
+  height: 100vh;
+  width: 100vw;
+  /*   background: red; */
+}
+
+.hero-bck-img {
+  /*   border-radius: 5px; */
+  background: #ffffff33;
+}
+
+.snk {
+  background-image:url("./skin_texture.png") ;
+  box-shadow: 0 0 4px 3px #ffffff29;
+}
+
+.snk-hd {
+  background-color: transparent;
+  background-size:cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content:center;
+  overflow: visible;
+  object-fit: contain;
+
+  
+}
+.head-img{
+   position: absolute;
+   top: 0 ;
+   left: 0;
+  background: transparent; 
+   box-shadow: none;
+   outline: none;
+   border: none;
+  background-size: contain; /* or any other size you set */
+  background-repeat: no-repeat;
+  overflow: visible; /* Temporarily change from 'hidden' */
+width: 100%;
+height: auto;
+min-height: 100%;
+scale: 2;
+}
+
+
+
+
+
+
+
+
+.head-right {
+  transform: rotate(90deg);
+}
+
+.head-down {
+  transform: rotate(180deg);
+}
+
+.head-left {
+  transform: rotate(270deg);
+}
+
+.head-up {
+  transform: rotate(0deg);
+}
+
+.snk-fd {
+  display: block;
+  scale: 1.5;
+  background-color: transparent;
+  background-image:url('https://cdn-icons-png.flaticon.com/512/3309/3309977.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  grid-row-end: span 1;
+  grid-column-end: span 1;
+  animation: breath 0.6s 0.3s linear alternate infinite;
+}
+
+
+.snk-fd.star-food {
+  scale: 1.8;
+  background-image:url('https://cdn-icons-png.flaticon.com/512/2489/2489756.png');
+
+  animation: rotate360 1.4s ease-in-out alternate infinite;
+}
+
+@keyframes breath {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rotate360 {
+  from {
+    rotate: 0deg;
+    scale: 1.3;
+    filter: brightness(1);
+  }
+
+  to {
+    rotate: 360deg;
+    scale: 1.8;
+    filter: brightness(2);
+  }
+}
+
+@keyframes highlight {
+  from {
+    scale: 1;
+  }
+
+  50% {
+    scale: 3;
+  }
+
+  to {
+    scale: 1;
+  }
+}
+
+footer {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  /*z-index: 99999;*/
+  padding: 10px;
+  color: black;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+footer > p:nth-child(3) {
+  margin-right: auto;
+}
+
+.game-state-container {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  bottom: 32px;
+  display: flex;
+  align-items: start;
+  justify-content: center;
+}
+
+.start-game {
+  font-size: 10rem;
+  color: white;
+  text-shadow: -3px -3px black, 2px 2px black, 5px 5px black;
+
+ font-family: "Jersey 10", serif;
+
+  
+  
+  font-optical-sizing: auto;
+  align-self: flex-end;
+  animation: blink 0.5s steps(1, end) infinite;
+  display: block;
+  position: relative;
+} 
+
+.pause-game {
+  position: fixed;
+  bottom: 0;
+  align-self: flex-end;
+  justify-self: center;
+  padding: 1rem 2rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pause-game span {
+  scale: 2;
+  rotate: 90deg;
+  transform-origin: center;
+  translate: 0 1px;
+}
+
+.hide {
+  visibility: hidden;
+  opacity: 0;
+  display: none;
+}
+
+.not-supported {
+  position: fixed;
+  top: 1rem;
+  align-self: center;
+  color: black;
+  justify-self: center;
+}
+
+.dialog {
+  padding: 2rem;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 275px;
+  height: 120px;
+  border: 5px solid black;
+  background: white;
+  box-shadow: 0 0 0 50vmax white;
+  z-index: 99999;
+  color: black;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 30px;
+  font-size: 1.4rem;
+}
+
+.keyboard-message {
+  grid-column: 1 / -1;
+}
+
+.keyboard-proceed {
+  grid-column: 1 / -1;
+  text-align: center;
+  text-decoration: underline;
+}
+
+@keyframes blink {
+  from,
+  to {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
