@@ -12,7 +12,7 @@ const config = {
   snakeLen: 5,
   points: 0,
   lives: 0,
-  speed: 10, // Change initial speed to 4 (slowest)
+  speed: 10, // Change initial speed to 4 (slowest) -> Let's keep original speed logic for now
   snakeBoard: "snk-brd",
   snakeCls: "snk",
   snakeFd: "snk-fd",
@@ -31,7 +31,7 @@ const config = {
   snakeFood: null,
   pointsCount: null,
   snakeFoodPos: [],
-  headPos: { col: 0, row: 0, dir: "up" },
+  headPos: { col: 0, row: 0, dir: "up" }, // Start facing up
   currentPosSet: new Set(),
   sameDirMap: {
     up: "-1,0",
@@ -39,13 +39,13 @@ const config = {
     left: "0,-1",
     right: "0,1",
   },
+  // Keep cancelDirMap based on *intended* direction, useful for logic check
   cancelDirMap: {
-    up: "ArrowDown",
-    down: "ArrowUp",
-    left: "ArrowRight",
-    right: "ArrowLeft",
+    up: "down",
+    down: "up",
+    left: "right",
+    right: "left",
   },
-  
   keyCodeToDirMap: {
     ArrowUp: "up",
     ArrowDown: "down",
@@ -74,13 +74,13 @@ const config = {
       "1,0": "down",
     },
   },
-  speedIntervals: [1,2,3,4], // Keep the intervals the same
+  // Removed speed interval logic as per original code comment state
+  // speedIntervals: [1,2,3,4],
   starFoodOffset: 5,
 };
 
 let counter = -1;
-
-let raf = null;
+let raf = null; // Represents the requestAnimationFrame ID, null if paused/stopped
 
 const startGameBtn = document.querySelector(`.${config.startGame}`);
 const pauseGameBtn = document.querySelector(`.${config.pauseGame}`);
@@ -90,24 +90,34 @@ const speedCount = document.querySelector(`.${config.spdCount}`);
 const deadCount = document.querySelector(`.${config.deadCount}`);
 const dialog = document.querySelector(`.${config.dialog}`);
 
+// --- Event Listeners ---
 startGameBtn.addEventListener("click", toggleStartGame);
 pauseGameBtn.addEventListener("click", toggleStartGame);
 document.body.addEventListener("keydown", handleKeyPress);
+// Hammer.js listeners will be added later in initGame.then()
 
+// --- Initial Setup ---
 pointsCount.textContent = config.points;
-speedCount.textContent = config.speed;
+speedCount.textContent = config.speed; // Display initial speed setting
 deadCount.textContent = config.lives;
+
+// --- Game Functions ---
 
 function placeSnakeFood() {
   const { cols, rows, snakeFood, points } = config;
-  let row = Math.floor(Math.random() * (rows - 4) + 2);
-  let col = Math.floor(Math.random() * (cols - 4) + 2);
+  let row, col;
+  // Ensure food doesn't spawn on the snake
+  do {
+    row = Math.floor(Math.random() * (rows - 4) + 2);
+    col = Math.floor(Math.random() * (cols - 4) + 2);
+  } while (config.currentPosSet.has(`${row},${col}`)); // Check against current snake positions
+
   config.snakeFoodPos = [row, col];
   snakeFood.style.setProperty("grid-row-start", row);
   snakeFood.style.setProperty("grid-column-start", col);
   snakeFood.setAttribute("data-dr", row);
   snakeFood.setAttribute("data-dc", col);
-  if (points !== 0 && points % 5 === 0) {
+  if (points !== 0 && points % config.starFoodOffset === 0) { // Use config offset
     snakeFood.classList.add(config.starFood)
   } else {
     snakeFood.classList.remove(config.starFood)
@@ -118,19 +128,26 @@ function createSnake() {
   const { snakeCls, snakePartCls, snakeHeadCls } = config;
   const snake = [];
 
+  // Clear previous snake/food if any (important for restarting)
+  snakeBrd.innerHTML = '';
+  config.currentPosSet.clear(); // Clear positions on creation
+
+
   const snakeFood = document.createElement("div");
   snakeFood.classList.add(config.snakeFd);
   snakeBrd.appendChild(snakeFood);
   config.snakeFood = snakeFood;
-  placeSnakeFood();
+  // Food placed after snake setup to avoid collision
+
 
   const head = document.createElement("div");
   head.classList.add(snakeCls);
   head.classList.add(snakeHeadCls);
-  
+  head.classList.add(dirToClassMap[config.headPos.dir]); // Add initial direction class
+
   const headImg = document.createElement("img");
   headImg.classList.add("head-img");
-  headImg.src = './fm_bg.png';
+  headImg.src = './fm_bg.png'; // Make sure this path is correct
 
   head.appendChild(headImg);
 
@@ -143,7 +160,6 @@ function createSnake() {
     snake.push(div);
     snakeBrd.appendChild(div);
   }
-  // snakeBoard.append(snake);
   config.snake = snake;
   return snake;
 }
@@ -159,98 +175,175 @@ function setup() {
     `repeat(${config.rows}, 1fr)`
   );
 
-  const prev = {};
-  prev.col = Math.floor(config.cols / 2);
-  prev.row = Math.floor(config.rows / 2);
-  config.headPos = { ...config.headPos, ...prev };
+  // Reset head position and direction for setup
+  const startCol = Math.floor(config.cols / 2);
+  const startRow = Math.floor(config.rows / 2);
+  config.headPos = { dir: "up", row: startRow, col: startCol }; // Reset position and direction
+  config.currentPosSet.clear(); // Clear old positions before setting new ones
+
+  let currentRow = startRow;
+  let currentCol = startCol;
+
   for (const snakePart of snake) {
-    snakePart.style.setProperty("grid-row", `${prev.row} / span 1`);
-    snakePart.style.setProperty("grid-column", `${prev.col} / span 1`);
-    snakePart.setAttribute("data-dr", prev.row);
-    snakePart.setAttribute("data-dc", prev.col);
-    // add all the current cols and rows.
-    config.currentPosSet.add(`${prev.row},${prev.col}`);
-    // prev.col += 1;
-    prev.row += 1;
+    snakePart.style.setProperty("grid-row", `${currentRow} / span 1`);
+    snakePart.style.setProperty("grid-column", `${currentCol} / span 1`);
+    snakePart.setAttribute("data-dr", currentRow);
+    snakePart.setAttribute("data-dc", currentCol);
+    config.currentPosSet.add(`${currentRow},${currentCol}`);
+    currentRow += 1; // Initial snake points downwards from head
+  }
+
+  // Place food *after* snake is positioned
+  placeSnakeFood();
+
+  // Ensure head class matches initial direction after setup
+   const headElement = document.querySelector(`.${config.snakeHeadCls}`);
+   if (headElement) {
+      Object.values(dirToClassMap).forEach(cls => headElement.classList.remove(cls));
+      headElement.classList.add(dirToClassMap[config.headPos.dir]);
+   }
+}
+
+// --- NEW: Refactored Function to Set Direction ---
+function setSnakeDirection(newDirection) {
+  // 1. Check if game is running
+  if (!raf) return;
+
+  // 2. Check if the direction is valid (it should be from our maps)
+  if (!dirToClassMap[newDirection]) return;
+
+  // 3. Prevent moving directly opposite
+  const currentDir = config.headPos.dir;
+  if (newDirection === config.cancelDirMap[currentDir]) {
+      console.log(`Ignoring opposite direction: ${newDirection} from ${currentDir}`);
+      return;
+  }
+
+  // 4. Update internal state
+  config.headPos.dir = newDirection;
+  console.log("New direction set:", newDirection);
+
+
+  // 5. Update visual representation (CSS class on head)
+  const headElement = document.querySelector(`.${config.snakeHeadCls}`);
+  if (headElement) {
+      // Remove all direction classes first
+      Object.values(dirToClassMap).forEach(cls => headElement.classList.remove(cls));
+      // Add the new direction class
+      headElement.classList.add(dirToClassMap[newDirection]);
+  } else {
+      console.error("Snake head element not found for CSS update.");
   }
 }
 
+// --- MODIFIED: Key Press Handler ---
 function handleKeyPress(event) {
-  const { headPos, keyCodeToDirMap, cancelDirMap } = config;
+  // Handle Space for Pause/Resume FIRST
   if (event.code === "Space") {
     toggleStartGame();
     return;
   }
 
-  if (!raf) return;
+  // Map key code to game direction
+  const newDirection = config.keyCodeToDirMap[event.code];
 
-  if (!keyCodeToDirMap[event.code]) return;
-  const { dir: currentDir } = headPos;
-  if (event.code === cancelDirMap[currentDir]) return;
-  console.log(keyCodeToDirMap[event.code]);
-  headPos.dir = keyCodeToDirMap[event.code];
-  const headElement = document.querySelector('.snk-hd');
-  console.log(dirToClassMap,headPos.dir)
-
-  // Remove all direction classes
-  Object.values(dirToClassMap).forEach(cls => 
-    
-    headElement.classList.remove(cls)
-  );
-  // Add new direction class
-  headElement.classList.add(dirToClassMap[headPos.dir]);
-  
+  // If the key pressed corresponds to a direction, try setting it
+  if (newDirection) {
+      setSnakeDirection(newDirection);
+  }
 }
 
 function handleEat() {
   config.points += 1;
   pointsCount.textContent = config.points;
-  // add one more snake part
-  // if (config.points % 2 === 0) {
+
+  // Add a new part to the snake
   const div = document.createElement("div");
   div.classList.add(config.snakeCls);
   div.classList.add(config.snakePartCls);
+
+  // Important: Add the new part visually *near* the tail for smoothness
+  // We'll position it correctly in the next moveSnake cycle
+  const tail = config.snake[config.snake.length - 1];
+  const tailRow = tail.getAttribute("data-dr");
+  const tailCol = tail.getAttribute("data-dc");
+  div.style.setProperty("grid-row", `${tailRow} / span 1`);
+  div.style.setProperty("grid-column", `${tailCol} / span 1`);
+  div.setAttribute("data-dr", tailRow);
+  div.setAttribute("data-dc", tailCol);
+
   config.snake.push(div);
   snakeBrd.appendChild(div);
 
-  // // }
-  // if (config.speed > 1) {
-  //   const pts = config.points;
-  //   if (pts > config.speedIntervals[3]) {
-  //     config.speed = 1;
-  //   } else if (pts > config.speedIntervals[2]) {
-  //     config.speed = 2;
-  //   } else if (pts > config.speedIntervals[1]) {
-  //     config.speed = 3;
-  //   } else if (pts > config.speedIntervals[0]) {
-  //     config.speed = 4;
-  //   }
-  //   speedCount.textContent = config.speed;
-  // }
-  placeSnakeFood();
+
+  // Speed logic (Optional - uncomment if needed)
+  /*
+  if (config.speed > 1) { // Assuming lower number means faster
+    const pts = config.points;
+    let newSpeed = config.speed; // Default to current
+    if (pts > config.speedIntervals[3]) { // Example thresholds
+      newSpeed = 1;
+    } else if (pts > config.speedIntervals[2]) {
+      newSpeed = 2;
+    } else if (pts > config.speedIntervals[1]) {
+      newSpeed = 3;
+    } else if (pts > config.speedIntervals[0]) {
+      newSpeed = 4;
+    }
+    if (newSpeed !== config.speed) {
+        config.speed = newSpeed;
+        speedCount.textContent = config.speed; // Update display
+    }
+  }
+  */
+
+  placeSnakeFood(); // Place new food
 }
 
 function getNextHeadOffset() {
-  const { headPos, cols, rows, posMap, sameDirMap, currentPosSet } = config;
+  const { headPos, cols, rows, sameDirMap, currentPosSet } = config;
   const { dir, col, row } = headPos;
-  let [nextRow, nextCol] = sameDirMap[dir].split(",").map((n) => parseInt(n));
 
-  nextRow = nextRow + row;
-  nextCol = nextCol + col;
+  // Calculate potential next coordinates based on direction
+  let [rowOffset, colOffset] = sameDirMap[dir].split(",").map((n) => parseInt(n));
+  let nextRow = row + rowOffset;
+  let nextCol = col + colOffset;
 
-  // break
-  if (currentPosSet.has(`${nextRow},${nextCol}`)) return;
+  // --- Wall Wrapping ---
+  if (nextCol >= cols) nextCol = 0; // Wrap right to left
+  if (nextCol < 0) nextCol = cols - 1; // Wrap left to right
+  if (nextRow >= rows) nextRow = 0; // Wrap bottom to top
+  if (nextRow < 0) nextRow = rows - 1; // Wrap top to bottom
 
-  if (nextCol > cols) nextCol = 0;
-  if (nextCol < 0) nextCol = cols;
-  if (nextRow < 0) nextRow = rows;
-  if (nextRow > rows) nextRow = 0;
+  // --- Self Collision Check ---
+  // Check if the *next* head position collides with any *current* body part position
+  // We temporarily remove the *current* tail's position from the set for this check,
+  // because the head can move into the space the tail just vacated.
+  const tail = config.snake[config.snake.length - 1];
+  const tailPosStr = `${tail.getAttribute("data-dr")},${tail.getAttribute("data-dc")}`;
+  let collision = false;
+  if (config.currentPosSet.has(`${nextRow},${nextCol}`)) {
+      // Only a collision if the target spot isn't the tail's current spot
+      if (`${nextRow},${nextCol}` !== tailPosStr) {
+          collision = true;
+      }
+      // Special case: Snake is very short (e.g., length 2) and tries to reverse immediately
+      if (config.snake.length <= 2 && (`${nextRow},${nextCol}` === tailPosStr) ) {
+         // This simple check might not be perfect for all edge cases but handles basic reversal
+         // A more robust check might be needed depending on minimum snake length rules
+      }
+  }
 
+
+  if (collision) {
+    console.log("Collision detected at:", nextRow, nextCol);
+    return null; // Indicate collision by returning null
+  }
+
+  // If no collision, update the head position state
   const nextPos = { row: nextRow, col: nextCol };
-
-  config.headPos = { ...config.headPos, ...nextPos };
-
-  return { ...nextPos };
+  config.headPos = { ...config.headPos, ...nextPos }; // Update row and col, keep dir
+  return nextPos; // Return the valid next position
 }
 
 function moveSnake() {
@@ -259,67 +352,110 @@ function moveSnake() {
     raf = requestAnimationFrame(moveSnake);
     return;
   }
+
   const { snake, snakeFoodPos } = config;
-  let nextPos = getNextHeadOffset();
-  config.currentPosSet.clear();
-  if (!nextPos) {
+  const nextHeadPos = getNextHeadOffset(); // Get calculated next position for the head
+
+  // --- Handle Collision ---
+  if (!nextHeadPos) {
+    console.log("Game Over - Collision!");
     cancelAnimationFrame(raf);
     raf = null;
     config.lives += 1;
     deadCount.textContent = config.lives;
+
+    // Reset UI for restart
+    startGameBtn.classList.remove(config.hide);
+    pauseGameBtn.classList.add(config.hide);
+    alert(`Game Over! Points: ${config.points}. Press Start to play again.`);
+    // Optionally reset points/speed here or keep score across lives
+    config.points = 0;
+    pointsCount.textContent = config.points;
+    // config.speed = 10; // Reset speed if desired
+    // speedCount.textContent = config.speed;
+
+    // Re-create and setup the snake for a new game
+    createSnake();
     setup();
-    raf = requestAnimationFrame(moveSnake);
+    // Don't automatically restart - wait for button press
     return;
   }
-  config.currentPosSet.add(`${nextPos.row},${nextPos.col}`);
-  let i = 0;
-  for (let snakePart of snake) {
-    config.currentPosSet.add(`${nextPos.row},${nextPos.col}`);
-    const row = parseInt(snakePart.getAttribute("data-dr"));
-    const col = parseInt(snakePart.getAttribute("data-dc"));
-    snakePart.style.setProperty("grid-row", `${nextPos.row} / span 1`);
-    snakePart.style.setProperty("grid-column", `${nextPos.col} / span 1`);
-    snakePart.setAttribute("data-dr", nextPos.row);
-    snakePart.setAttribute("data-dc", nextPos.col);
-    nextPos = { row, col };
-    if (
-      i === 0 &&
-      nextPos.row === snakeFoodPos[0] &&
-      nextPos.col === snakeFoodPos[1]
-    ) {
+
+  // --- Move the Snake Body ---
+  let prevRow = nextHeadPos.row;
+  let prevCol = nextHeadPos.col;
+  const newPosSet = new Set(); // Build the set of positions for the *next* frame
+
+  // Iterate through snake parts, updating their positions
+  for (let i = 0; i < snake.length; i++) {
+    const snakePart = snake[i];
+    const currentRow = parseInt(snakePart.getAttribute("data-dr"));
+    const currentCol = parseInt(snakePart.getAttribute("data-dc"));
+
+    // Update style and data attributes
+    snakePart.style.setProperty("grid-row", `${prevRow} / span 1`);
+    snakePart.style.setProperty("grid-column", `${prevCol} / span 1`);
+    snakePart.setAttribute("data-dr", prevRow);
+    snakePart.setAttribute("data-dc", prevCol);
+
+    // Add the new position to the set for the next frame's collision check
+    newPosSet.add(`${prevRow},${prevCol}`);
+
+    // Prepare for the next part: its new position will be the current part's old position
+    prevRow = currentRow;
+    prevCol = currentCol;
+
+    // --- Check for Food Collision (only for the head) ---
+    if (i === 0 && // Only check for the head part
+        parseInt(snakePart.getAttribute("data-dr")) === snakeFoodPos[0] &&
+        parseInt(snakePart.getAttribute("data-dc")) === snakeFoodPos[1])
+    {
       handleEat();
+      // No need to break, the rest of the snake still needs to move
     }
   }
+
+  // Update the master position set for the next frame
+  config.currentPosSet = newPosSet;
+
+  // Continue the game loop
   raf = requestAnimationFrame(moveSnake);
 }
 
+
 function toggleStartGame() {
-  if (raf) {
+  if (raf) { // Game is running -> Pause it
     cancelAnimationFrame(raf);
-    raf = null;
-    startGameBtn.classList.toggle(config.hide);
-    pauseGameBtn.classList.toggle(config.hide);
-    return;
+    raf = null; // Indicate paused state
+    startGameBtn.classList.remove(config.hide); // Show Start button
+    pauseGameBtn.classList.add(config.hide);   // Hide Pause button
+    console.log("Game Paused");
+  } else { // Game is paused or stopped -> Start/Resume it
+    // If starting from a stopped state (e.g., after game over), ensure setup is fresh
+    if (!startGameBtn.classList.contains(config.hide)) { // Check if start button was visible
+        // Optional: Reset score/speed if starting fresh after game over
+        // config.points = 0; pointsCount.textContent = config.points;
+        // config.speed = 10; speedCount.textContent = config.speed;
+        // createSnake(); // Create a new snake if needed (already done after game over)
+        // setup(); // Ensure correct initial positioning
+    }
+    raf = requestAnimationFrame(moveSnake); // Start the game loop
+    startGameBtn.classList.add(config.hide);   // Hide Start button
+    pauseGameBtn.classList.remove(config.hide); // Show Pause button
+    console.log("Game Started/Resumed");
   }
-  raf = requestAnimationFrame(moveSnake);
-  startGameBtn.classList.toggle(config.hide);
-  pauseGameBtn.classList.toggle(config.hide);
 }
 
 function checkIsMobile() {
   let isMobile = false;
   const userAgent =
     navigator.userAgent || navigator.vendor || window.opera || "";
-  if (
-    /(android|bb\d+|meego).+mobile|avantgo|bada\/|whiteberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(
-      userAgent
-    ) ||
-    /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
-      userAgent.substr(0, 4)
-    )
-  ) {
+  // Regex check (simplified)
+  if (/(android|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(userAgent)) {
     isMobile = true;
-  } else if ("ontouchstart" in document.documentElement) {
+  }
+  // Touch event check as fallback
+  else if ("ontouchstart" in document.documentElement) {
     isMobile = true;
   }
   return isMobile;
@@ -329,21 +465,61 @@ const initGame = new Promise(function initGame(resolve) {
   const isMobile = checkIsMobile();
 
   if (isMobile) {
-    dialog.classList.remove(config.hide);
-    document
-      .querySelector(`.${config.keyboardProceed}`)
-      .addEventListener("click", () => {
-        resolve();
-      });
-  } else {
+    // Check if dialog should be shown (e.g., first time or always for mobile?)
+    // dialog.classList.remove(config.hide);
+    // If using a dialog:
+    // document
+    //   .querySelector(`.${config.keyboardProceed}`) // Assuming this button dismisses dialog
+    //   .addEventListener("click", () => {
+    //     dialog.classList.add(config.hide);
+    //     resolve(); // Resolve after dialog interaction
+    //   });
+    // If no dialog needed for mobile:
     resolve();
+  } else {
+    resolve(); // Resolve immediately for desktop
   }
 });
 
-function startGame() {
-  dialog.classList.add(config.hide);
-  createSnake();
-  setup();
+function setupSwipeControls() {
+    const hammer = new Hammer(document.body); // Listen on the whole body
+
+    // Enable swipe recognizer for all directions
+    hammer.get('swipe').set({ direction: Hammer.DIRECTION_ALL });
+
+    // Map Hammer swipe events to our setSnakeDirection function
+    hammer.on('swipeup', (ev) => {
+        console.log("Swipe Up Detected");
+        setSnakeDirection('up');
+    });
+    hammer.on('swipedown', (ev) => {
+        console.log("Swipe Down Detected");
+        setSnakeDirection('down');
+    });
+    hammer.on('swipeleft', (ev) => {
+        console.log("Swipe Left Detected");
+        setSnakeDirection('left');
+    });
+    hammer.on('swiperight', (ev) => {
+        console.log("Swipe Right Detected");
+        setSnakeDirection('right');
+    });
+
+    console.log("Swipe controls initialized.");
 }
 
-initGame.then(startGame);
+
+function startGameFlow() {
+  // Hide dialog if it was shown
+  dialog.classList.add(config.hide);
+  // Initial game setup
+  createSnake();
+  setup();
+  // Setup swipe controls AFTER basic setup is done
+  setupSwipeControls();
+  // Game doesn't start automatically, waits for button press
+  console.log("Game ready. Press Start or Space.");
+}
+
+// --- Initialize Game ---
+initGame.then(startGameFlow); // Call the main game flow function after promise resolves
